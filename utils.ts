@@ -36,3 +36,15 @@ export function readDayInputs(day: number) {
 
   return { input, example };
 }
+
+export function first<T>(arr: T[]) {
+  return arr[0];
+}
+
+export function last<T>(arr: T[]) {
+  return arr[arr.length - 1];
+}
+
+export function middle<T>(arr: T[]) {
+  return arr[Math.floor(arr.length / 2)];
+}
