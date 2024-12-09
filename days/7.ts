@@ -105,7 +105,7 @@ export function two(f: "example" | "input") {
     const eqs = generatePossibleEqsTwo(item.numbers);
     if (eqs.some((e) => calculateEq(e) === item.res)) res += item.res;
   });
-  console.log((performance.now() - now) / 1000);
+  // console.log((performance.now() - now) / 1000);
   console.log(res);
 }
 
