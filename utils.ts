@@ -26,8 +26,8 @@ export function randomRange(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
-export function readFile(path: string) {
-  return fs.readFileSync(path, "utf8");
+export function readFile(path: string): string {
+  return fs.readFileSync(path, "utf8").trim();
 }
 
 export function readDayInputs(day: number) {
@@ -59,3 +59,5 @@ export function swap<T>(a: number, b: number, arr: T[]): T[] {
 export function remove<T>(arr: T[], idx: number): T[] {
   return arr.filter((_, i) => i !== idx);
 }
+
+export type ValueOf<T> = T[keyof T];
