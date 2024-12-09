@@ -61,3 +61,16 @@ export function remove<T>(arr: T[], idx: number): T[] {
 }
 
 export type ValueOf<T> = T[keyof T];
+
+export function logMatrix(matrix: unknown[][]): void {
+  console.log(matrix.map((l) => l.join("")).join("\n"));
+}
+
+type MapStrFn<T> = (char: string) => T;
+export function strToMatrix<T = string>(str: string, map?: MapStrFn<T>): T[][] {
+  return str.split("\n").map((l) => {
+    return l.split("").map(map ?? ((c) => c as T));
+  });
+}
+
+export type Position = { row: number; col: number };

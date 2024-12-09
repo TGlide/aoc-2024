@@ -1,4 +1,4 @@
-import { readFile, rotateMatrix } from "../utils";
+import { readFile, type Position } from "../utils";
 
 const example = readFile("days/6-example.txt");
 const input = readFile("days/6.txt");
@@ -15,8 +15,6 @@ const directions = {
 } as const;
 
 type Direction = (typeof directions)[keyof typeof directions];
-
-type Position = { row: number; col: number };
 
 function includesPosition(positions: Position[], pos: Position): boolean {
   return positions.some((p) => p.row === pos.row && p.col === pos.col);
