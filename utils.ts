@@ -48,3 +48,14 @@ export function last<T>(arr: T[]) {
 export function middle<T>(arr: T[]) {
   return arr[Math.floor(arr.length / 2)];
 }
+
+export function swap<T>(a: number, b: number, arr: T[]): T[] {
+  const newArr = [...arr];
+  newArr[a] = arr[b];
+  newArr[b] = arr[a];
+  return newArr;
+}
+
+export function remove<T>(arr: T[], idx: number): T[] {
+  return arr.filter((_, i) => i !== idx);
+}
