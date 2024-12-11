@@ -62,8 +62,81 @@ export function remove<T>(arr: T[], idx: number): T[] {
 
 export type ValueOf<T> = T[keyof T];
 
-export function logMatrix(matrix: unknown[][]): void {
-  console.log(matrix.map((l) => l.join("")).join("\n"));
+export function logMatrix(
+  matrix: unknown[][],
+  highlightPositions: Position[] = [],
+): void {
+  const highlights = new Set(
+    highlightPositions.map((pos) => `${pos.row},${pos.col}`),
+  );
+
+  // ANSI color codes
+  const RESET = "\x1b[0m";
+
+  function getNumberColor(num: number): string {
+    if (num < 0) return "\x1b[31m"; // Red for negative
+
+    // Distinct color for each digit 0-9
+    const digitColors = {
+      0: "\x1b[100m",
+      1: "\x1b[94m",
+      2: "\x1b[92m",
+      3: "\x1b[93m",
+      4: "\x1b[96m",
+      5: "\x1b[91m",
+      6: "\x1b[34m",
+      7: "\x1b[32m",
+      8: "\x1b[33m",
+      9: "\x1b[101m",
+    }[num];
+
+    return digitColors || "\x1b[95m"; // Bright Magenta for numbers > 9
+  }
+
+  function getLetterColor(char: string): string {
+    const code = char.toLowerCase().charCodeAt(0) - 97;
+    if (code < 0 || code > 25) return "";
+
+    const colors = [
+      "\x1b[31m", // Red
+      "\x1b[32m", // Green
+      "\x1b[33m", // Yellow
+      "\x1b[34m", // Blue
+      "\x1b[35m", // Magenta
+      "\x1b[36m", // Cyan
+    ];
+
+    return colors[Math.floor(code / 4)];
+  }
+
+  function getItemColor(item: unknown): string {
+    if (typeof item === "number") {
+      return getNumberColor(item);
+    }
+    if (typeof item === "string" && item.length === 1) {
+      return getLetterColor(item);
+    }
+    return ""; // No color for other types
+  }
+
+  const output = matrix
+    .map((row, rowIndex) => {
+      return row
+        .map((cell, colIndex) => {
+          const isHighlighted = highlights.has(`${rowIndex},${colIndex}`);
+
+          if (isHighlighted) {
+            const color = getItemColor(cell);
+            return color ? `${color}${cell}${RESET}` : `${cell}`;
+          }
+
+          return `${cell}`;
+        })
+        .join("");
+    })
+    .join("\n");
+
+  console.log(output);
 }
 
 type MapStrFn<T> = (char: string) => T;
@@ -74,3 +147,34 @@ export function strToMatrix<T = string>(str: string, map?: MapStrFn<T>): T[][] {
 }
 
 export type Position = { row: number; col: number };
+
+export function hasPosition(positions: Position[], pos: Position): boolean {
+  return positions.some((p) => p.row === pos.row && p.col === pos.col);
+}
+
+export function isInBounds(pos: Position, matrix: unknown[][]) {
+  const totalRows = matrix.length;
+  const totalCols = matrix[0].length;
+
+  return (
+    pos.row >= 0 && pos.row < totalRows && pos.col >= 0 && pos.col < totalCols
+  );
+}
+
+export function getAdjacent(pos: Position) {
+  return [
+    { row: pos.row - 1, col: pos.col },
+    { row: pos.row, col: pos.col + 1 },
+    { row: pos.row + 1, col: pos.col },
+    { row: pos.row, col: pos.col - 1 },
+  ];
+}
+
+export function getAdjacentInMatrix(pos: Position, matrix: unknown[][]) {
+  return [
+    { row: pos.row - 1, col: pos.col },
+    { row: pos.row, col: pos.col + 1 },
+    { row: pos.row + 1, col: pos.col },
+    { row: pos.row, col: pos.col - 1 },
+  ].filter((p) => isInBounds(p, matrix));
+}
