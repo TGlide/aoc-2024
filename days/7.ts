@@ -1,7 +1,6 @@
-import { readFile, type ValueOf } from "../utils";
+import { readCurrentDayInputs, type ValueOf } from "../utils";
 
-const example = readFile("days/7-example.txt");
-const input = readFile("days/7.txt");
+const { example, input } = readCurrentDayInputs();
 
 const operators = {
   add: "+",

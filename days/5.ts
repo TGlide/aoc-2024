@@ -1,7 +1,6 @@
-import { middle, readFile, remove, swap } from "../utils";
+import { middle, readCurrentDayInputs, remove, swap } from "../utils";
 
-const example = readFile("days/5-example.txt");
-const input = readFile("days/5.txt");
+const { example, input } = readCurrentDayInputs();
 
 export function one(f: "example" | "input") {
   const data = f === "example" ? example : input;
@@ -51,7 +50,7 @@ export function two(f: "example" | "input") {
   let { failed, rulesMap } = one(f);
   let res = 0;
   console.log("failed", failed);
-  let successes = [];
+  let successes: number[][] = [];
   while (failed.length) {
     const copy = [...failed];
     copy.forEach((update, u) => {

@@ -1,7 +1,6 @@
-import { readFile, type Position } from "../utils";
+import { readCurrentDayInputs, type Position } from "../utils";
 
-const example = readFile("days/6-example.txt");
-const input = readFile("days/6.txt");
+const { example, input } = readCurrentDayInputs();
 
 const guardChars = {
   up: "^",

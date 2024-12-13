@@ -1,7 +1,6 @@
-import { readFile, rotateMatrix } from "../utils";
+import { readCurrentDayInputs, rotateMatrix } from "../utils";
 
-const example = readFile("days/4-example.txt");
-const input = readFile("days/4.txt");
+const { example, input } = readCurrentDayInputs();
 
 function reducer(acc: number, curr: string) {
   const xmasCount = [...curr.matchAll(/XMAS/g)].length;

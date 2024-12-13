@@ -1,13 +1,12 @@
 import {
   keys,
   logMatrix,
-  readFile,
+  readCurrentDayInputs,
   strToMatrix,
   type Position,
 } from "../utils";
 
-const example = readFile("days/8-example.txt");
-const input = readFile("days/8.txt");
+const { example, input } = readCurrentDayInputs();
 
 export function one(f: "example" | "input") {
   const data = f === "example" ? example : input;

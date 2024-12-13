@@ -1,8 +1,6 @@
-import { readFile } from '../utils';
+import { readCurrentDayInputs } from '../utils';
 
-const example = readFile('days/3-example.txt');
-const example2 = readFile('days/3-example-2.txt');
-const input = readFile('days/3.txt');
+const { example, example2, input } = readCurrentDayInputs();
 
 const mulRegex = /mul\((\d+),(\d+)\)/gs;
 

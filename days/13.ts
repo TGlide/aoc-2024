@@ -1,7 +1,6 @@
-import { readFile } from "../utils";
+import { readCurrentDayInputs } from "../utils";
 
-const example = readFile("days/11-example.txt");
-const input = readFile("days/11.txt");
+const { example, input } = readCurrentDayInputs();
 
 export function one(f: "example" | "input") {
   const data = f === "example" ? example : input;

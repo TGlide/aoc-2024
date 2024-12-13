@@ -1,7 +1,6 @@
-import { rotateMatrix, readFile } from "../utils";
+import { rotateMatrix, readCurrentDayInputs } from "../utils";
 
-const example = readFile("days/1-example.txt");
-const input = readFile("days/1.txt");
+const { example, input } = readCurrentDayInputs();
 
 export function getLines(data: string) {
   const lines = data

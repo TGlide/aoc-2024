@@ -1,7 +1,6 @@
-import { keys, readFile, strToMatrix, type Position } from "../utils";
+import { keys, readCurrentDayInputs, strToMatrix, type Position } from "../utils";
 
-const example = readFile("days/9-example.txt");
-const input = readFile("days/9.txt");
+const { example, input } = readCurrentDayInputs();
 
 type FileBlock = { id: number; size: number; type: "file-block" };
 type FreeSpace = { type: "free-space"; size: number };
