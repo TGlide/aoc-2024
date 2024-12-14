@@ -1,4 +1,4 @@
-import { digits, isEven, readCurrentDayInputs } from "../utils";
+import { digits, isEven, readCurrentDayInputs } from "../../utils";
 
 const { example, input } = readCurrentDayInputs();
 

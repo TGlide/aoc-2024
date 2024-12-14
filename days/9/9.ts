@@ -1,4 +1,4 @@
-import { keys, readCurrentDayInputs, strToMatrix, type Position } from "../utils";
+import { keys, readCurrentDayInputs, strToMatrix, type Position } from "../../utils";
 
 const { example, input } = readCurrentDayInputs();
 

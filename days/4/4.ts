@@ -1,4 +1,4 @@
-import { readCurrentDayInputs, rotateMatrix } from "../utils";
+import { readCurrentDayInputs, rotateMatrix } from "../../utils";
 
 const { example, input } = readCurrentDayInputs();
 

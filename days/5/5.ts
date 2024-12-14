@@ -1,4 +1,4 @@
-import { middle, readCurrentDayInputs, remove, swap } from "../utils";
+import { middle, readCurrentDayInputs, remove, swap } from "../../utils";
 
 const { example, input } = readCurrentDayInputs();
 

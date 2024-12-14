@@ -4,13 +4,13 @@ import {
   hasPosition,
   isInBounds,
   logMatrix,
+  readCurrentDayInputs,
   readFile,
   strToMatrix,
   type Position,
-} from "../utils";
+} from "../../utils";
 
-const example = readFile("days/10-example.txt");
-const input = readFile("days/10.txt");
+const { example, input } = readCurrentDayInputs();
 
 type TrailHead = {
   pos: Position;

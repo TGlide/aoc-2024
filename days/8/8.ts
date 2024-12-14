@@ -4,7 +4,7 @@ import {
   readCurrentDayInputs,
   strToMatrix,
   type Position,
-} from "../utils";
+} from "../../utils";
 
 const { example, input } = readCurrentDayInputs();
 
