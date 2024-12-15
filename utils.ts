@@ -224,3 +224,29 @@ export function digits(n: number) {
 export function isEven(n: number) {
   return n % 2 === 0;
 }
+
+type AnyFunction = (...args: any[]) => any;
+
+export function memoize<T extends AnyFunction>(fn: T): T {
+  const cache = new Map<string, ReturnType<T>>();
+  let count = 0;
+
+  return ((...args: Parameters<T>): ReturnType<T> => {
+    // Create a cache key from the stringified arguments
+    const key = JSON.stringify(args);
+
+    if (cache.has(key)) {
+      // console.log(`${fn} count: ${++count}`);
+      return cache.get(key)!;
+    }
+
+    const result = fn(...args);
+    cache.set(key, result);
+    // console.log("Cache for", fn, "has", cache.size, "keys");
+    return result;
+  }) as T;
+}
+
+export function sum(arr: number[]): number {
+  return arr.reduce((acc, curr) => acc + curr, 0);
+}
