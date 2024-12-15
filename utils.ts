@@ -250,3 +250,14 @@ export function memoize<T extends AnyFunction>(fn: T): T {
 export function sum(arr: number[]): number {
   return arr.reduce((acc, curr) => acc + curr, 0);
 }
+
+export function traverseMatrix<T>(
+  matrix: T[][],
+  cb: (p: { row: number; col: number; item: T }) => void,
+) {
+  for (let row = 0; row < matrix.length; row++) {
+    for (let col = 0; col < matrix[row].length; col++) {
+      cb({ row, col, item: matrix[row][col] });
+    }
+  }
+}
