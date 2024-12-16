@@ -4,7 +4,6 @@ import {
   readCurrentDayInputs,
   getIdxAt,
   type Position,
-  getQuadrants,
   traverseMatrix,
 } from "../../utils";
 
