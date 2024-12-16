@@ -261,3 +261,44 @@ export function traverseMatrix<T>(
     }
   }
 }
+
+export function getDeterminant(matrix: number[][]) {
+  return matrix
+    .map((row) => row.reduce((acc, curr) => acc * curr, 1))
+    .reduce((acc, curr) => acc * curr, 1);
+}
+
+export function getIdxAt(idx: number, length: number) {
+  if (idx >= 0) return idx % length;
+  return length + (idx % length);
+}
+
+export function getQuadrants<T>(matrix: T[][]): T[][][] {
+  // Check if matrix is empty
+  if (!matrix.length || !matrix[0].length) {
+    return [];
+  }
+
+  // Get dimensions
+  const rows = matrix.length;
+  const cols = matrix[0].length;
+
+  // Calculate midpoints (using Math.floor for odd dimensions)
+  const midRow = Math.floor(rows / 2);
+  const midCol = Math.floor(cols / 2);
+
+  // Split into quadrants
+  const topLeft = matrix.slice(0, midRow).map((row) => row.slice(0, midCol));
+
+  const topRight = matrix.slice(0, midRow).map((row) => row.slice(midCol + 1));
+
+  const bottomLeft = matrix
+    .slice(midRow + 1)
+    .map((row) => row.slice(0, midCol));
+
+  const bottomRight = matrix
+    .slice(midRow + 1)
+    .map((row) => row.slice(midCol + 1));
+
+  return [topLeft, topRight, bottomLeft, bottomRight];
+}
