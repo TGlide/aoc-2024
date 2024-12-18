@@ -1,14 +1,4 @@
-import {
-  getAdjacent,
-  getAdjacentInMatrix,
-  logMatrix,
-  readCurrentDayInputs,
-  strToMatrix,
-  traverseMatrix,
-  traverseMatrixGenerator,
-  type Position,
-  type ValueOf,
-} from "../../utils";
+import { readCurrentDayInputs, type Position, type ValueOf } from "../../utils";
 import { Matrix } from "../../utils/matrix";
 
 const inputs = readCurrentDayInputs();
@@ -106,11 +96,11 @@ export function one(data: string) {
   }
 
   let res = 0;
-	for (const { item, row, col } of map.traverse()) {
+  for (const { item, row, col } of map.traverse()) {
     if (item !== ENTITIES.box) continue;
     res += row * 100 + col;
-	}
-	console.log(res)
+  }
+  console.log(res);
 }
 
 // one(inputs.example);

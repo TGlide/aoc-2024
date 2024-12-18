@@ -280,3 +280,7 @@ export function getIdxAt(idx: number, length: number) {
   if (idx >= 0) return idx % length;
   return length + (idx % length);
 }
+
+export function keyOf<T extends object>(obj: T, value: T[keyof T]): keyof T {
+	return Object.keys(obj).find((key) => key in obj && obj[key] === value) as keyof T;
+}
