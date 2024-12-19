@@ -64,14 +64,14 @@ export function one(f: "example" | "input") {
       console.log();
       console.log();
       const arr = allPositions.slice(0, i + 1);
-      logMatrix(matrix, arr.map(pos => ({ pos, color: "cyan" })));
+      logMatrix(matrix, { highlighted: arr.map(pos => ({ pos, color: "cyan" })) });
       await new Promise((r) => setTimeout(r, 12));
       console.clear();
     }
   }
   // logAnim();
 
-  logMatrix(matrix, allPositions.map(pos => ({ pos, color: "cyan" })));
+  logMatrix(matrix, { highlighted: allPositions.map(pos => ({ pos, color: "cyan" })) });
   console.log(res);
 }
 

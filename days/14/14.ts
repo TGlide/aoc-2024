@@ -105,12 +105,12 @@ export function one(f: "example" | "input") {
     });
   });
 
-  logMatrix(matrix, []);
+  logMatrix(matrix, {});
 
   const quadrants = getQuadrants(matrix);
   let res = 0;
   quadrants.forEach((q) => {
-    logMatrix(q, []);
+    logMatrix(q, {});
     let robots = 0;
     traverseMatrix(q, ({ item }) => {
       if (typeof item === "string") return;
@@ -156,7 +156,7 @@ export function two(f: "example" | "input") {
     });
 
     console.log(start + s);
-    logMatrix(matrix, []);
+    logMatrix(matrix, {});
     console.log();
   }
 }

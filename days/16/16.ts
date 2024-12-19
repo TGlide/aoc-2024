@@ -5,7 +5,7 @@ import {
   type Position,
 } from "../../utils/position";
 import { logMatrix, Matrix } from "../../utils/matrix";
-import { last } from "../../utils/array";
+import { first, last } from "../../utils/array";
 import { readCurrentDayInputs } from "../../utils/file";
 import { keys, type ValueOf } from "../../utils/types";
 
@@ -62,10 +62,9 @@ export function wrongOne(data: string) {
   }
 
   console.log(count);
-  logMatrix(
-    map.value,
-    [...visited].map((pos) => ({ pos, color: "cyan" })),
-  );
+  logMatrix(map.value, {
+    highlighted: [...visited].map((pos) => ({ pos, color: "cyan" })),
+  });
 }
 
 type Direction = "east" | "west" | "north" | "south";
@@ -158,7 +157,9 @@ export async function one(data: string) {
 
   let score = Infinity;
   let winner: Trail | null = null;
+  const allVisited = [] as Position[];
 
+  let count = 0;
   while (stack.length) {
     stack.sort(sortByDistance);
 
@@ -173,37 +174,61 @@ export async function one(data: string) {
     stack.push(...trail.getNextTrails());
 
     // clear console in bun
-    console.clear();
-    console.count("Iteration");
-    console.log(`Distance: ${trail.distance}`);
-    console.log(`Score: ${trail.score} / ${score}`);
-    console.log(`Visited: ${trail.visited.length}`);
-    console.log(`Position: ${trail.current.row},${trail.current.col}`);
-    console.log(`Pending: ${stack.length}`);
+    // console.clear();
+    count++;
+    if (count % 1000 === 0) {
+      console.log(`Iteration: ${count}`);
+      console.log(`Distance: ${trail.distance}`);
+      console.log(`Score: ${trail.score} / ${score}`);
+      console.log(`Visited: ${trail.visited.length}`);
+      console.log(`Position: ${trail.current.row},${trail.current.col}`);
+      console.log(`Pending: ${stack.length}`);
 
-    logMatrix(map.value, [
-      ...[...trail.visited]
-        .map((pos) => ({ pos, color: "background-cyan" }) as const)
-        .filter(
-          (p) => !isEqualPos(start, p.pos) && !isEqualPos(trail.current, p.pos),
-        ),
-      { pos: trail.current, color: "background-red" },
-    ]);
+      const copy = [...stack];
+      copy.sort(sortByDistance);
+      const bestTrail = winner! ?? copy.shift()!;
+      stack
+        .flatMap((t) => t.visited)
+        .forEach((p) => {
+          if (hasPosition(allVisited, p)) return;
+          allVisited.push(p);
+        });
 
-    console.log();
-    await new Promise((r) => setTimeout(r, 10));
+      logMatrix(map.value, {
+        highlighted: [
+          ...allVisited.map((pos) => {
+            return { pos, color: "white" } as const;
+          }),
+          ...copy.map((t) => {
+            return { pos: t.current, color: "yellow", override: "H" } as const;
+          }),
+          ...bestTrail.visited.map(
+            (pos) =>
+              ({ pos, color: "background-yellow", override: "x" }) as const,
+          ),
+        ],
+        override: ({ item, ...pos }) => {
+          if (item !== ENTITIES.empty) return item;
+          if (hasPosition(allVisited, pos)) return item;
+          return " ";
+        },
+      });
+      console.log();
+    }
+
+    // await new Promise((r) => setTimeout(r, 10));
   }
 
-  console.clear();
-  console.log(score);
-  logMatrix(
-    map.value,
-    winner!.visited.map((pos) => ({ pos, color: "background-cyan" })),
-  );
+  // console.clear();
+  console.log(`Score: ${score}`);
+  // logMatrix(
+  //   map.value,
+  //   { highlighted: winner!.visited.map((pos) => ({ pos, color: "background-cyan" })) }
+  // );
 }
 
-await one(inputs.example);
+// await one(inputs.example);
 // await one(inputs.example2);
-// await one(inputs.input);
+await one(inputs.input);
 
 console.log();

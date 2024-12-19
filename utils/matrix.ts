@@ -45,8 +45,8 @@ export class Matrix<T> {
     return positions.map((p) => (isInBounds(p, this.data) ? p : null));
   }
 
-  log(highlightPositions: HighlightPosition[] = []): void {
-    logMatrix(this.data, highlightPositions);
+  log(options?: Partial<LogMatrixOptions<T>>): void {
+    logMatrix(this.data, options);
   }
 
   logStr(): void {
@@ -122,13 +122,18 @@ const ANSI_COLORS: Record<Color, string> = {
   "background-gray": "\x1b[100m",
 };
 
-export function logMatrix(
-  matrix: unknown[][],
-  highlights: HighlightPosition[] = [],
+type LogMatrixOptions<T> = {
+  highlighted?: HighlightPosition[];
+  override: (args: { item: T } & Position) => string;
+};
+
+export function logMatrix<T>(
+  matrix: T[][],
+  options: Partial<LogMatrixOptions<T>> = {},
 ): void {
   const RESET = "\x1b[0m";
   const highlightMap = new Map(
-    highlights.map((h) => [`${h.pos.row},${h.pos.col}`, h]),
+    (options.highlighted ?? []).map((h) => [`${h.pos.row},${h.pos.col}`, h]),
   );
 
   const output = matrix
@@ -137,10 +142,19 @@ export function logMatrix(
         .map((cell, colIndex) => {
           const key = `${rowIndex},${colIndex}`;
           const highlight = highlightMap.get(key);
-          if (!highlight) return `${cell}`;
 
-          const content = highlight.override ?? cell;
-          return `${ANSI_COLORS[highlight.color]}${content}${RESET}`;
+          let content = cell as unknown;
+          if (options.override) {
+            content = options.override({
+              item: cell,
+              row: rowIndex,
+              col: colIndex,
+            });
+          }
+
+          if (!highlight) return `${content}`;
+          const displayContent = highlight.override ?? content;
+          return `${ANSI_COLORS[highlight.color]}${displayContent}${RESET}`;
         })
         .join(""),
     )
