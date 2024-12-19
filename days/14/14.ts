@@ -1,11 +1,8 @@
-import {
-  logMatrix,
-  memoize,
-  readCurrentDayInputs,
-  getIdxAt,
-  type Position,
-  traverseMatrix,
-} from "../../utils";
+import { logMatrix, traverseMatrix } from "../../utils/matrix";
+import { memoize } from "../../utils/math";
+import { readCurrentDayInputs } from "../../utils/file";
+import { getIdxAt } from "../../utils/array";
+import type { Position } from "../../utils/position";
 
 const { example, input } = readCurrentDayInputs();
 

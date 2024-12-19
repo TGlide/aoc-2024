@@ -1,4 +1,5 @@
-import { readCurrentDayInputs, type ValueOf } from "../../utils";
+import { readCurrentDayInputs } from "../../utils/file";
+import type { ValueOf } from "../../utils/types";
 
 const { example, input } = readCurrentDayInputs();
 

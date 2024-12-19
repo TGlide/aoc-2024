@@ -1,13 +1,6 @@
-import {
-  getAdjacent,
-  getAdjacentInMatrix,
-  hasPosition,
-  logMatrix,
-  readCurrentDayInputs,
-  strToMatrix,
-  traverseMatrix,
-  type Position,
-} from "../../utils";
+import { getAdjacent, getAdjacentInMatrix, hasPosition, type Position } from "../../utils/position";
+import { logMatrix, strToMatrix, traverseMatrix } from "../../utils/matrix";
+import { readCurrentDayInputs } from "../../utils/file";
 
 const { example, input } = readCurrentDayInputs();
 

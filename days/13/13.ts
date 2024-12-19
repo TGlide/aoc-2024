@@ -1,4 +1,5 @@
-import { readCurrentDayInputs, type Position } from "../../utils";
+import { readCurrentDayInputs } from "../../utils/file";
+import type { Position } from "../../utils/position";
 
 const { example, input } = readCurrentDayInputs();
 

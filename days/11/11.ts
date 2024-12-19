@@ -1,10 +1,6 @@
-import {
-  digits,
-  isEven,
-  memoize,
-  readCurrentDayInputs,
-  sum,
-} from "../../utils";
+import { digits, isEven, memoize } from "../../utils/math";
+import { readCurrentDayInputs } from "../../utils/file";
+import { sum } from "../../utils/array";
 
 const { example, input } = readCurrentDayInputs();
 

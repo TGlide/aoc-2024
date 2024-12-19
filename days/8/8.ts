@@ -1,10 +1,7 @@
-import {
-  keys,
-  logMatrix,
-  readCurrentDayInputs,
-  strToMatrix,
-  type Position,
-} from "../../utils";
+import { keys } from "../../utils/types";
+import { logMatrix, strToMatrix } from "../../utils/matrix";
+import { readCurrentDayInputs } from "../../utils/file";
+import type { Position } from "../../utils/position";
 
 const { example, input } = readCurrentDayInputs();
 

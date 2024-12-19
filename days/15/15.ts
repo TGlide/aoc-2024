@@ -1,4 +1,6 @@
-import { readCurrentDayInputs, type Position, type ValueOf } from "../../utils";
+import { readCurrentDayInputs } from "../../utils/file";
+import type { Position } from "../../utils/position";
+import type { ValueOf } from "../../utils/types";
 import { Matrix } from "../../utils/matrix";
 
 const inputs = readCurrentDayInputs();
@@ -85,13 +87,13 @@ function shiftPos(args: ShiftPosArgs) {
 export function one(data: string) {
   const { map, directions } = parseData(data);
 
-  map.log();
+  // map.log();
   while (directions.length) {
     const dir = directions.shift()!;
     const pos = getRobotPosition(map);
     shiftPos({ pos, map, dir });
 
-    console.log(`Direction: ${dir}`);
+    // console.log(`Direction: ${dir}`);
     // map.log();
   }
 
