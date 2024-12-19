@@ -174,9 +174,9 @@ export async function one(data: string) {
     stack.push(...trail.getNextTrails());
 
     // clear console in bun
-    // console.clear();
     count++;
-    if (count % 1000 === 0) {
+    if (count % 100000 === 0) {
+      console.clear();
       console.log(`Iteration: ${count}`);
       console.log(`Distance: ${trail.distance}`);
       console.log(`Score: ${trail.score} / ${score}`);
@@ -208,6 +208,7 @@ export async function one(data: string) {
           ),
         ],
         override: ({ item, ...pos }) => {
+          if (item === ENTITIES.wall) return { color: "gray", content: item };
           if (item !== ENTITIES.empty) return item;
           if (hasPosition(allVisited, pos)) return item;
           return " ";

@@ -122,9 +122,14 @@ const ANSI_COLORS: Record<Color, string> = {
   "background-gray": "\x1b[100m",
 };
 
+type ColorOverride = {
+  content: string;
+  color: Color;
+};
+
 type LogMatrixOptions<T> = {
   highlighted?: HighlightPosition[];
-  override: (args: { item: T } & Position) => string;
+  override: (args: { item: T } & Position) => string | ColorOverride;
 };
 
 export function logMatrix<T>(
@@ -144,15 +149,25 @@ export function logMatrix<T>(
           const highlight = highlightMap.get(key);
 
           let content = cell as unknown;
+          let color: Color | undefined;
+
           if (options.override) {
-            content = options.override({
+            const overrideResult = options.override({
               item: cell,
               row: rowIndex,
               col: colIndex,
             });
+            if (typeof overrideResult === 'object' && 'content' in overrideResult && 'color' in overrideResult) {
+              content = overrideResult.content;
+              color = overrideResult.color;
+            } else {
+              content = overrideResult;
+            }
           }
 
-          if (!highlight) return `${content}`;
+          if (!highlight) {
+            return color ? `${ANSI_COLORS[color]}${content}${RESET}` : `${content}`;
+          }
           const displayContent = highlight.override ?? content;
           return `${ANSI_COLORS[highlight.color]}${displayContent}${RESET}`;
         })
