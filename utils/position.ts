@@ -37,3 +37,7 @@ export function getAdjacentInMatrix(pos: Position, matrix: unknown[][]) {
 export function distance(pos1: Position, pos2: Position) {
   return Math.abs(pos1.row - pos2.row) + Math.abs(pos1.col - pos2.col);
 }
+
+export function isEqualPos(pos1: Position, pos2: Position) {
+  return pos1.row === pos2.row && pos1.col === pos2.col;
+}

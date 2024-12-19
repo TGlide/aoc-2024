@@ -1,8 +1,13 @@
-import { distance, hasPosition, type Position } from "../../utils/position";
+import {
+  distance,
+  hasPosition,
+  isEqualPos,
+  type Position,
+} from "../../utils/position";
 import { logMatrix, Matrix } from "../../utils/matrix";
 import { last } from "../../utils/array";
 import { readCurrentDayInputs } from "../../utils/file";
-import type { ValueOf } from "../../utils/types";
+import { keys, type ValueOf } from "../../utils/types";
 
 const inputs = readCurrentDayInputs();
 
@@ -42,9 +47,14 @@ export function wrongOne(data: string) {
       }
       visited.add(pos);
 
-      const adj = map.getAdjacent(pos).filter((p) => {
-        return !hasPosition(visited, p) && map.at(p) !== ENTITIES.wall;
-      });
+      const adj = map
+        .getAdjacent(pos)
+        .filter(
+          (p): p is Position =>
+            p !== null &&
+            !hasPosition(visited, p) &&
+            map.at(p) !== ENTITIES.wall,
+        );
 
       adj.forEach((p) => list.add(p));
     }
@@ -52,7 +62,10 @@ export function wrongOne(data: string) {
   }
 
   console.log(count);
-  logMatrix(map.value, visited);
+  logMatrix(
+    map.value,
+    [...visited].map((pos) => ({ pos, color: "cyan" })),
+  );
 }
 
 type Direction = "east" | "west" | "north" | "south";
@@ -78,88 +91,119 @@ export async function one(data: string) {
   const start = map.findOrThrow(ENTITIES.start);
   const end = map.findOrThrow(ENTITIES.end);
 
-  type Trail = { pos: Position; score: number; direction: Direction };
-  let stack: Trail[] = [{ pos: start, score: 0, direction: "east" }];
-  const visited = new Set<Position>([start]);
+  type TrailArgs = {
+    visited: Position[];
+    score?: number;
+    direction: Direction;
+  };
+  class Trail {
+    visited: Position[];
+    score = 0;
+    direction: Direction;
 
-  function isValidPos(pos: Position) {
-    return (
-      // !hasPosition(visited, pos) &&
-      map.has(pos) && map.at(pos) !== ENTITIES.wall
-    );
+    constructor({ visited, score = 0, direction }: TrailArgs) {
+      this.visited = visited;
+      this.direction = direction;
+      this.score = score;
+    }
+
+    get current() {
+      return last(this.visited);
+    }
+
+    has(pos: Position) {
+      return hasPosition(this.visited, pos);
+    }
+
+    get distance() {
+      return distance(this.current, end);
+    }
+
+    getNextTrails(): Trail[] {
+      const dirs: Record<Direction, Position> = {
+        north: { row: this.current.row - 1, col: this.current.col },
+        south: { row: this.current.row + 1, col: this.current.col },
+        east: { row: this.current.row, col: this.current.col + 1 },
+        west: { row: this.current.row, col: this.current.col - 1 },
+      } as const;
+
+      const rels = getDirsRelativeTo(this.direction);
+
+      const trails = keys(rels).reduce<Trail[]>((acc, rel) => {
+        const dir = rels[rel];
+        const pos = dirs[dir];
+        if (this.has(pos) || !map.has(pos) || map.at(pos) === ENTITIES.wall) {
+          return acc;
+        }
+
+        const t = new Trail({
+          visited: [...this.visited, pos],
+          direction: dir,
+          score: this.score + (rel === "forward" ? 1 : 1001),
+        });
+        return [...acc, t];
+      }, []);
+
+      return trails;
+    }
   }
 
+  let stack: Trail[] = [
+    new Trail({ visited: [start], score: 0, direction: "east" }),
+  ];
+
   function sortByDistance(a: Trail, b: Trail) {
-    return distance(a.pos, end) - distance(b.pos, end);
+    return a.distance - b.distance;
   }
 
   let score = Infinity;
+  let winner: Trail | null = null;
+
   while (stack.length) {
     stack.sort(sortByDistance);
+
     const trail = stack.shift()!;
     if (trail.score >= score) continue;
-    if (map.at(trail.pos) === ENTITIES.end) {
+    if (map.at(trail.current) === ENTITIES.end) {
       score = Math.min(trail.score, score);
+      winner = trail;
       continue;
     }
-    if (!hasPosition(visited, trail.pos)) visited.add(trail.pos);
 
-    const dirs: Record<Direction, Position> = {
-      north: { row: trail.pos.row - 1, col: trail.pos.col },
-      south: { row: trail.pos.row + 1, col: trail.pos.col },
-      east: { row: trail.pos.row, col: trail.pos.col + 1 },
-      west: { row: trail.pos.row, col: trail.pos.col - 1 },
-    } as const;
-
-    const { forward, left, right } = getDirsRelativeTo(trail.direction);
-    if (isValidPos(dirs[left])) {
-      stack.push({
-        pos: dirs[left],
-        score: trail.score + 1001,
-        direction: left,
-      });
-    }
-    if (isValidPos(dirs[right])) {
-      stack.push({
-        pos: dirs[right],
-        score: trail.score + 1001,
-        direction: right,
-      });
-    }
-    if (isValidPos(dirs[forward])) {
-      stack.push({
-        pos: dirs[forward],
-        score: trail.score + 1,
-        direction: forward,
-      });
-    }
+    stack.push(...trail.getNextTrails());
 
     // clear console in bun
     console.clear();
-    console.count("iteration");
-    console.log(distance(trail.pos, end), trail.score, visited.size);
+    console.count("Iteration");
+    console.log(`Distance: ${trail.distance}`);
+    console.log(`Score: ${trail.score} / ${score}`);
+    console.log(`Visited: ${trail.visited.length}`);
+    console.log(`Position: ${trail.current.row},${trail.current.col}`);
+    console.log(`Pending: ${stack.length}`);
 
-    // console.log(
-    //   trail.score,
-    //   "/",
-    //   score,
-    //   distance(trail.pos, end),
-    //   "stack",
-    //   stack.length,
-    // );
-
-    logMatrix(map.value, visited);
+    logMatrix(map.value, [
+      ...[...trail.visited]
+        .map((pos) => ({ pos, color: "background-cyan" }) as const)
+        .filter(
+          (p) => !isEqualPos(start, p.pos) && !isEqualPos(trail.current, p.pos),
+        ),
+      { pos: trail.current, color: "background-red" },
+    ]);
 
     console.log();
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 10));
   }
 
-  logMatrix(map.value, visited);
+  console.clear();
   console.log(score);
+  logMatrix(
+    map.value,
+    winner!.visited.map((pos) => ({ pos, color: "background-cyan" })),
+  );
 }
 
-// one(inputs.example);
-// one(inputs.example2);
-one(inputs.input);
+await one(inputs.example);
+// await one(inputs.example2);
+// await one(inputs.input);
 
 console.log();

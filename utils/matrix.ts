@@ -6,7 +6,7 @@ export class Matrix<T> {
 
   constructor(input: string | T[][]) {
     if (typeof input === "string") {
-      this.data = input.split("\n").map(line => line.split("") as T[]);
+      this.data = input.split("\n").map((line) => line.split("") as T[]);
     } else {
       this.data = input;
     }
@@ -42,15 +42,15 @@ export class Matrix<T> {
       { row: pos.row + 1, col: pos.col }, // down
       { row: pos.row, col: pos.col - 1 }, // left
     ];
-    return positions.map(p => isInBounds(p, this.data) ? p : null);
+    return positions.map((p) => (isInBounds(p, this.data) ? p : null));
   }
 
-  log(highlightPositions: Iterable<Position> = []): void {
+  log(highlightPositions: HighlightPosition[] = []): void {
     logMatrix(this.data, highlightPositions);
   }
 
   logStr(): void {
-    console.log(this.data.map(row => row.join("")).join("\n"));
+    console.log(this.data.map((row) => row.join("")).join("\n"));
   }
 
   *traverse() {
@@ -77,78 +77,73 @@ export function rotateMatrix<T>(matrix: T[][]) {
   return result;
 }
 
+export type Color =
+  | "red"
+  | "green"
+  | "yellow"
+  | "blue"
+  | "magenta"
+  | "cyan"
+  | "white"
+  | "gray"
+  | "background-red"
+  | "background-green"
+  | "background-yellow"
+  | "background-blue"
+  | "background-magenta"
+  | "background-cyan"
+  | "background-white"
+  | "background-gray";
+
+export type HighlightPosition = {
+  pos: Position;
+  color: Color;
+  override?: string;
+};
+
+const ANSI_COLORS: Record<Color, string> = {
+  // Foreground colors
+  red: "\x1b[31m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  blue: "\x1b[34m",
+  magenta: "\x1b[35m",
+  cyan: "\x1b[36m",
+  white: "\x1b[37m",
+  gray: "\x1b[90m",
+  // Background colors
+  "background-red": "\x1b[41m",
+  "background-green": "\x1b[42m",
+  "background-yellow": "\x1b[43m",
+  "background-blue": "\x1b[44m",
+  "background-magenta": "\x1b[45m",
+  "background-cyan": "\x1b[46m",
+  "background-white": "\x1b[47m",
+  "background-gray": "\x1b[100m",
+};
+
 export function logMatrix(
   matrix: unknown[][],
-  highlightPositions: Iterable<Position> = [],
+  highlights: HighlightPosition[] = [],
 ): void {
-  const highlights = new Set(
-    [...highlightPositions].map((pos) => `${pos.row},${pos.col}`),
+  const RESET = "\x1b[0m";
+  const highlightMap = new Map(
+    highlights.map((h) => [`${h.pos.row},${h.pos.col}`, h]),
   );
 
-  // ANSI color codes
-  const RESET = "\x1b[0m";
-
-  function getNumberColor(num: number): string {
-    if (num < 0) return "\x1b[31m"; // Red for negative
-
-    // Distinct color for each digit 0-9
-    const digitColors = {
-      0: "\x1b[100m",
-      1: "\x1b[94m",
-      2: "\x1b[92m",
-      3: "\x1b[93m",
-      4: "\x1b[96m",
-      5: "\x1b[91m",
-      6: "\x1b[34m",
-      7: "\x1b[32m",
-      8: "\x1b[33m",
-      9: "\x1b[101m",
-    }[num];
-
-    return digitColors || "\x1b[95m"; // Bright Magenta for numbers > 9
-  }
-
-  function getLetterColor(char: string): string {
-    const code = char.toLowerCase().charCodeAt(0) - 97;
-    if (code < 0 || code > 25) return "";
-
-    const colors = [
-      "\x1b[31m", // Red
-      "\x1b[32m", // Green
-      "\x1b[33m", // Yellow
-      "\x1b[34m", // Blue
-      "\x1b[35m", // Magenta
-      "\x1b[36m", // Cyan
-    ];
-
-    return colors[Math.floor(code / 4)];
-  }
-
-  function getItemColor(item: unknown): string {
-    if (typeof item === "number") {
-      return getNumberColor(item);
-    }
-    if (typeof item === "string" && item.length === 1) {
-      return getLetterColor(item);
-    }
-    return "\x1b[104m"; // Default color
-  }
-
   const output = matrix
-    .map((row, rowIndex) => {
-      return row
+    .map((row, rowIndex) =>
+      row
         .map((cell, colIndex) => {
-          const isHighlighted = highlights.has(`${rowIndex},${colIndex}`);
+          const key = `${rowIndex},${colIndex}`;
+          const highlight = highlightMap.get(key);
+          if (!highlight) return `${cell}`;
 
-          if (isHighlighted) {
-            const color = getItemColor(cell);
-            return color ? `${color}${cell}${RESET}` : `${cell}`;
-          }
-
-          return `${cell}`;
+          const content = highlight.override ?? cell;
+          return `${ANSI_COLORS[highlight.color]}${content}${RESET}`;
         })
-        .join("");
-    })
+        .join(""),
+    )
     .join("\n");
 
   console.log(output);
