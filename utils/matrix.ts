@@ -1,3 +1,4 @@
+import type { Direction } from "./direction";
 import type { Position } from "./position";
 import { isInBounds } from "./position";
 
@@ -43,6 +44,15 @@ export class Matrix<T> {
       { row: pos.row, col: pos.col - 1 }, // left
     ];
     return positions.map((p) => (isInBounds(p, this.data) ? p : null));
+  }
+
+  getAdjacentMap(pos: Position): Record<Direction, Position | null> {
+    return {
+      north: { row: pos.row - 1, col: pos.col },
+      south: { row: pos.row + 1, col: pos.col },
+      west: { row: pos.row, col: pos.col - 1 },
+      east: { row: pos.row, col: pos.col + 1 },
+    };
   }
 
   log(options?: Partial<LogMatrixOptions<T>>): void {
@@ -157,7 +167,11 @@ export function logMatrix<T>(
               row: rowIndex,
               col: colIndex,
             });
-            if (typeof overrideResult === 'object' && 'content' in overrideResult && 'color' in overrideResult) {
+            if (
+              typeof overrideResult === "object" &&
+              "content" in overrideResult &&
+              "color" in overrideResult
+            ) {
               content = overrideResult.content;
               color = overrideResult.color;
             } else {
@@ -166,7 +180,9 @@ export function logMatrix<T>(
           }
 
           if (!highlight) {
-            return color ? `${ANSI_COLORS[color]}${content}${RESET}` : `${content}`;
+            return color
+              ? `${ANSI_COLORS[color]}${content}${RESET}`
+              : `${content}`;
           }
           const displayContent = highlight.override ?? content;
           return `${ANSI_COLORS[highlight.color]}${displayContent}${RESET}`;

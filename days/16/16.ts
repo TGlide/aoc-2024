@@ -1,12 +1,7 @@
-import {
-  distance,
-  hasPosition,
-  isEqualPos,
-  type Position,
-} from "../../utils/position";
-import { logMatrix, Matrix } from "../../utils/matrix";
-import { first, last } from "../../utils/array";
+import { getRelativeDirs, type Direction } from "../../utils/direction";
 import { readCurrentDayInputs } from "../../utils/file";
+import { Matrix } from "../../utils/matrix";
+import { type Position } from "../../utils/position";
 import { keys, type ValueOf } from "../../utils/types";
 
 const inputs = readCurrentDayInputs();
@@ -25,211 +20,150 @@ function parseData(data: string): Map {
   return new Matrix(data);
 }
 
-export function wrongOne(data: string) {
-  const map = parseData(data);
-  map.logStr();
-
-  const start = map.findOrThrow(ENTITIES.start);
-  const end = map.findOrThrow(ENTITIES.end);
-
-  const list = new Set<Position>([start]);
-  const visited = new Set<Position>([start]);
-
-  let count = 0;
-  while (list.size) {
-    const toRead = [...list];
-    list.clear();
-
-    for (const pos of toRead) {
-      if (map.at(pos) === ENTITIES.end) {
-        list.clear();
-        break;
-      }
-      visited.add(pos);
-
-      const adj = map
-        .getAdjacent(pos)
-        .filter(
-          (p): p is Position =>
-            p !== null &&
-            !hasPosition(visited, p) &&
-            map.at(p) !== ENTITIES.wall,
-        );
-
-      adj.forEach((p) => list.add(p));
-    }
-    count++;
-  }
-
-  console.log(count);
-  logMatrix(map.value, {
-    highlighted: [...visited].map((pos) => ({ pos, color: "cyan" })),
-  });
-}
-
-type Direction = "east" | "west" | "north" | "south";
-type RelativeDir = "forward" | "left" | "right";
-
-function getDirsRelativeTo(dir: Direction): Record<RelativeDir, Direction> {
-  switch (dir) {
-    case "east":
-      return { forward: "east", left: "south", right: "north" };
-    case "west":
-      return { forward: "west", left: "north", right: "south" };
-    case "north":
-      return { forward: "north", left: "west", right: "east" };
-    case "south":
-      return { forward: "south", left: "east", right: "west" };
-  }
-}
-
 export async function one(data: string) {
   const map = parseData(data);
-  map.logStr();
+  // map.logStr();
 
   const start = map.findOrThrow(ENTITIES.start);
   const end = map.findOrThrow(ENTITIES.end);
 
-  type TrailArgs = {
-    visited: Position[];
-    score?: number;
-    direction: Direction;
+  type Node = {
+    pos: Position;
+    dir: Direction;
   };
-  class Trail {
-    visited: Position[];
-    score = 0;
-    direction: Direction;
 
-    constructor({ visited, score = 0, direction }: TrailArgs) {
-      this.visited = visited;
-      this.direction = direction;
-      this.score = score;
+  type NodeKey = string;
+
+  function getNodeKey(node: Node): NodeKey {
+    return `${getPosKey(node.pos)};${node.dir}`;
+  }
+
+  function getPosKey(pos: Position) {
+    return `pos:{${pos.row},${pos.col}}`;
+  }
+
+  function getPos(nodeKey: NodeKey): Position {
+    const [row, col] = /pos:{(\d+),(\d+)}/
+      .exec(nodeKey)!
+      .slice(1, 3)
+      .map(Number);
+    return { row, col };
+  }
+
+  const startNode: Node = { pos: start, dir: "east" };
+  const scoreMap: Record<NodeKey, number> = {
+    [getNodeKey(startNode)]: 0,
+  };
+
+  function getScore(node: Node) {
+    const nodeKey = getNodeKey(node);
+    if (!(nodeKey in scoreMap)) {
+      scoreMap[nodeKey] = Infinity;
     }
 
-    get current() {
-      return last(this.visited);
+    return scoreMap[nodeKey];
+  }
+
+  function updateScore(node: Node, score: number) {
+    if (score < getScore(node)) {
+      scoreMap[getNodeKey(node)] = score;
+    }
+  }
+
+  function getMinScoreOfPos(pos: Position) {
+    return keys(scoreMap).reduce<number>((acc, curr) => {
+      if (!curr.includes(getPosKey(pos))) return acc;
+      return Math.min(acc, scoreMap[curr]);
+    }, Infinity);
+  }
+
+  class Queue {
+    value: Node[] = [];
+    visited: Set<NodeKey> = new Set();
+
+    constructor(initial: Node[]) {
+      this.value = initial;
     }
 
-    has(pos: Position) {
-      return hasPosition(this.visited, pos);
-    }
+    private findInsertionIndex(score: number): number {
+      let left = 0;
+      let right = this.value.length;
 
-    get distance() {
-      return distance(this.current, end);
-    }
-
-    getNextTrails(): Trail[] {
-      const dirs: Record<Direction, Position> = {
-        north: { row: this.current.row - 1, col: this.current.col },
-        south: { row: this.current.row + 1, col: this.current.col },
-        east: { row: this.current.row, col: this.current.col + 1 },
-        west: { row: this.current.row, col: this.current.col - 1 },
-      } as const;
-
-      const rels = getDirsRelativeTo(this.direction);
-
-      const trails = keys(rels).reduce<Trail[]>((acc, rel) => {
-        const dir = rels[rel];
-        const pos = dirs[dir];
-        if (this.has(pos) || !map.has(pos) || map.at(pos) === ENTITIES.wall) {
-          return acc;
+      while (left < right) {
+        const mid = Math.floor((left + right) / 2);
+        if (getScore(this.value[mid]) > score) {
+          right = mid;
+        } else {
+          left = mid + 1;
         }
+      }
 
-        const t = new Trail({
-          visited: [...this.visited, pos],
-          direction: dir,
-          score: this.score + (rel === "forward" ? 1 : 1001),
-        });
-        return [...acc, t];
-      }, []);
-
-      return trails;
-    }
-  }
-
-  let stack: Trail[] = [
-    new Trail({ visited: [start], score: 0, direction: "east" }),
-  ];
-
-  function sortByDistance(a: Trail, b: Trail) {
-    return a.distance - b.distance;
-  }
-
-  let score = Infinity;
-  let winner: Trail | null = null;
-  const allVisited = [] as Position[];
-
-  let count = 0;
-  while (stack.length) {
-    stack.sort(sortByDistance);
-
-    const trail = stack.shift()!;
-    if (trail.score >= score) continue;
-    if (map.at(trail.current) === ENTITIES.end) {
-      score = Math.min(trail.score, score);
-      winner = trail;
-      continue;
+      return left;
     }
 
-    stack.push(...trail.getNextTrails());
-
-    // clear console in bun
-    count++;
-    if (count % 100000 === 0) {
-      console.clear();
-      console.log(`Iteration: ${count}`);
-      console.log(`Distance: ${trail.distance}`);
-      console.log(`Score: ${trail.score} / ${score}`);
-      console.log(`Visited: ${trail.visited.length}`);
-      console.log(`Position: ${trail.current.row},${trail.current.col}`);
-      console.log(`Pending: ${stack.length}`);
-
-      const copy = [...stack];
-      copy.sort(sortByDistance);
-      const bestTrail = winner! ?? copy.shift()!;
-      stack
-        .flatMap((t) => t.visited)
-        .forEach((p) => {
-          if (hasPosition(allVisited, p)) return;
-          allVisited.push(p);
-        });
-
-      logMatrix(map.value, {
-        highlighted: [
-          ...allVisited.map((pos) => {
-            return { pos, color: "white" } as const;
-          }),
-          ...copy.map((t) => {
-            return { pos: t.current, color: "yellow", override: "H" } as const;
-          }),
-          ...bestTrail.visited.map(
-            (pos) =>
-              ({ pos, color: "background-yellow", override: "x" }) as const,
-          ),
-        ],
-        override: ({ item, ...pos }) => {
-          if (item === ENTITIES.wall) return { color: "gray", content: item };
-          if (item !== ENTITIES.empty) return item;
-          if (hasPosition(allVisited, pos)) return item;
-          return " ";
-        },
-      });
-      console.log();
+    get next() {
+      const next = this.value.shift();
+      if (!next) return null;
+      this.visited.add(getNodeKey(next));
+      return next;
     }
 
-    // await new Promise((r) => setTimeout(r, 10));
+    push(item: Node) {
+      if (this.visited.has(getNodeKey(item))) return;
+
+      const index = this.findInsertionIndex(getScore(item));
+      this.value.splice(index, 0, item);
+    }
+
+    get size() {
+      return this.value.length;
+    }
+  }
+  const queue = new Queue([{ pos: start, dir: "east" }]);
+
+  while (queue.size) {
+    const node = queue.next!;
+    const { pos, dir } = node;
+    const score = scoreMap[getNodeKey(node)];
+
+    const adjacent = map.getAdjacentMap(pos);
+    const { forward, left, right } = getRelativeDirs(dir);
+
+    const [fp, lp, rp] = [adjacent[forward], adjacent[left], adjacent[right]];
+
+    if (fp && map.has(fp) && map.at(fp) !== ENTITIES.wall) {
+      const fn: Node = { pos: fp, dir: forward };
+      updateScore(fn, score + 1);
+      queue.push(fn);
+    }
+
+    if (lp && map.has(lp) && map.at(lp) !== ENTITIES.wall) {
+      const ln: Node = { pos: lp, dir: left };
+      updateScore(ln, score + 1001);
+      queue.push(ln);
+    }
+
+    if (rp && map.has(rp) && map.at(rp) !== ENTITIES.wall) {
+      const rn: Node = { pos: rp, dir: right };
+      updateScore(rn, score + 1001);
+      queue.push(rn);
+    }
+
+    // console.clear();
+    // map.log({
+    //   highlighted: [...queue.visited].map((k) => ({
+    //     pos: getPos(k),
+    //     color: "background-cyan",
+    //   })),
+    // });
   }
 
-  // console.clear();
-  console.log(`Score: ${score}`);
-  // logMatrix(
-  //   map.value,
-  //   { highlighted: winner!.visited.map((pos) => ({ pos, color: "background-cyan" })) }
-  // );
+  console.log(getMinScoreOfPos(end));
 }
 
-// await one(inputs.example);
-// await one(inputs.example2);
+await one(inputs.example);
+await one(inputs.example2);
+await one(inputs.example3);
 await one(inputs.input);
 
 console.log();
