@@ -20,7 +20,7 @@ function parseData(data: string): Map {
   return new Matrix(data);
 }
 
-export async function one(data: string) {
+export async function solve(data: string) {
   const map = parseData(data);
   // map.logStr();
 
@@ -33,27 +33,32 @@ export async function one(data: string) {
   };
 
   type NodeKey = string;
-
-  function getNodeKey(node: Node): NodeKey {
-    return `${getPosKey(node.pos)};${node.dir}`;
-  }
+  type PosKey = string;
 
   function getPosKey(pos: Position) {
     return `pos:{${pos.row},${pos.col}}`;
   }
 
-  function getPos(nodeKey: NodeKey): Position {
-    const [row, col] = /pos:{(\d+),(\d+)}/
-      .exec(nodeKey)!
-      .slice(1, 3)
-      .map(Number);
-    return { row, col };
+  function getPosFromPosKey(pk: PosKey): Position {
+    const [row, col] = /pos:\{(\d+),(\d+)\}/.exec(pk)?.slice(1, 3) ?? [];
+    return { row: Number(row), col: Number(col) };
+  }
+
+  function getNodeKey(node: Node): NodeKey {
+    return `${getPosKey(node.pos)};${node.dir}`;
+  }
+
+  function getPosKeyFromNodeKey(nodeKey: NodeKey): PosKey {
+    const [posKey] = nodeKey.split(";");
+    return posKey;
   }
 
   const startNode: Node = { pos: start, dir: "east" };
+
   const scoreMap: Record<NodeKey, number> = {
     [getNodeKey(startNode)]: 0,
   };
+  const parentMap: Record<NodeKey, NodeKey[]> = {};
 
   function getScore(node: Node) {
     const nodeKey = getNodeKey(node);
@@ -64,17 +69,23 @@ export async function one(data: string) {
     return scoreMap[nodeKey];
   }
 
-  function updateScore(node: Node, score: number) {
-    if (score < getScore(node)) {
-      scoreMap[getNodeKey(node)] = score;
-    }
-  }
+  type UpdateScoreArgs = {
+    node: Node;
+    newScore: number;
+    parent: Node;
+  };
+  function updateScore({ node, newScore, parent }: UpdateScoreArgs) {
+    const [nk, pk] = [getNodeKey(node), getNodeKey(parent)];
+    if (!(nk in parentMap)) parentMap[nk] = [pk];
 
-  function getMinScoreOfPos(pos: Position) {
-    return keys(scoreMap).reduce<number>((acc, curr) => {
-      if (!curr.includes(getPosKey(pos))) return acc;
-      return Math.min(acc, scoreMap[curr]);
-    }, Infinity);
+    const score = getScore(node);
+
+    if (newScore < score) {
+      scoreMap[nk] = newScore;
+      parentMap[nk] = [pk];
+    } else if (newScore === score) {
+      parentMap[nk].push(pk);
+    }
   }
 
   class Queue {
@@ -133,19 +144,19 @@ export async function one(data: string) {
 
     if (fp && map.has(fp) && map.at(fp) !== ENTITIES.wall) {
       const fn: Node = { pos: fp, dir: forward };
-      updateScore(fn, score + 1);
+      updateScore({ node: fn, parent: node, newScore: score + 1 });
       queue.push(fn);
     }
 
     if (lp && map.has(lp) && map.at(lp) !== ENTITIES.wall) {
       const ln: Node = { pos: lp, dir: left };
-      updateScore(ln, score + 1001);
+      updateScore({ node: ln, parent: node, newScore: score + 1001 });
       queue.push(ln);
     }
 
     if (rp && map.has(rp) && map.at(rp) !== ENTITIES.wall) {
       const rn: Node = { pos: rp, dir: right };
-      updateScore(rn, score + 1001);
+      updateScore({ node: rn, parent: node, newScore: score + 1001 });
       queue.push(rn);
     }
 
@@ -158,12 +169,49 @@ export async function one(data: string) {
     // });
   }
 
-  console.log(getMinScoreOfPos(end));
+  const endKeys = keys(scoreMap).reduce<NodeKey[]>((acc, curr) => {
+    if (!curr.includes(getPosKey(end))) return acc;
+    return [...acc, curr];
+  }, []);
+
+  const minScore = endKeys.reduce<number>((acc, curr) => {
+    const s = scoreMap[curr];
+    return s < acc ? s : acc;
+  }, Infinity);
+
+  console.log("One:", minScore);
+
+  const seats = new Set<PosKey>();
+  const visited = new Set<NodeKey>();
+  const stack = [
+    ...endKeys.filter((k) => {
+      return scoreMap[k] === minScore;
+    }),
+  ];
+  while (stack.length) {
+    const nk = stack.pop()!;
+    visited.add(nk);
+    seats.add(getPosKeyFromNodeKey(nk));
+    const parents = parentMap[nk] ?? [];
+    parents.filter((k) => !visited.has(k)).forEach((p) => stack.push(p));
+  }
+
+  map.log({
+    highlighted: [...seats].map((pk) => {
+      return {
+        pos: getPosFromPosKey(pk),
+        color: "background-cyan",
+        override: "O",
+      };
+    }),
+  });
+  console.log("Two:", seats.size);
+  console.log();
 }
 
-await one(inputs.example);
-await one(inputs.example2);
-await one(inputs.example3);
-await one(inputs.input);
+await solve(inputs.example);
+await solve(inputs.example2);
+await solve(inputs.example3);
+await solve(inputs.input);
 
 console.log();
