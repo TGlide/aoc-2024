@@ -15,11 +15,11 @@ const ENTITIES = {
 
 type Entity = ValueOf<typeof ENTITIES>;
 
-export async function solve(inputType: keyof typeof inputs) {
+export function solve(inputType: keyof typeof inputs, slice: number) {
   const data = inputs[inputType];
   const bytes: Position[] = data
     .split("\n")
-    .slice(0, inputType === "input" ? 1024 : 12)
+    .slice(0, slice)
     .map((line) => {
       const [x, y] = line.split(",").map(Number);
       return { row: y, col: x };
@@ -57,10 +57,26 @@ export async function solve(inputType: keyof typeof inputs) {
   });
 
   const score = dijkstra.calculate();
-  console.log("One", score);
+  return score;
 }
 
-await solve("example");
-await solve("input");
+function one(inputType: keyof typeof inputs) {
+  console.log("One:", solve(inputType, inputType === "input" ? 1024 : 12));
+}
+
+function two(inputType: keyof typeof inputs) {
+  let slice = inputType === "input" ? 1024 : 12;
+  while (solve(inputType, slice) !== Infinity) {
+    slice += 1;
+    console.log(slice);
+  }
+  console.log("Two:", inputs[inputType].split("\n")[slice - 1]);
+}
+
+one("example");
+one("input");
 
 console.log();
+
+two("example");
+two("input");

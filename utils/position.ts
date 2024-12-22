@@ -48,7 +48,7 @@ export function isPosition(pos: unknown): pos is Position {
   );
 }
 
-type PosKey = string;
+export type PosKey = string;
 
 export function getPosKey(pos: Position) {
   return `pos:{${pos.row},${pos.col}}`;
