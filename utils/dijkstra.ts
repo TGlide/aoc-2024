@@ -1,34 +1,60 @@
 import type { Matrix } from "./matrix";
-import { getPos, getPosKey, type PosKey, type Position } from "./position";
+import { getPos, getPosKey, type Position, type PosKey } from "./position";
+import { keys } from "./types";
 
-type Node = {
+type NodeKey = string;
+
+type Node<Extra = {}> = {
   pos: Position;
+} & Extra;
+
+type NodeWithScore<T> = Node<T> & {
   score: number;
 };
 
-type UpdateScoreArgs = {
-  pos: Position;
-  score: number;
-  parent: Position;
+function getNodeKey<T>(node: Node<T>): NodeKey {
+  const objKeys = keys(node)
+    .filter((k) => k !== "score")
+    .toSorted();
+
+  return objKeys
+    .map((k) => {
+      return k === "pos" ? getPosKey(node.pos) : `${k as string}:${node[k]}`;
+    })
+    .join(";");
+}
+
+function getPosFromPosKey(pk: PosKey): Position {
+  const [row, col] = /pos:\{(\d+),(\d+)\}/.exec(pk)?.slice(1, 3) ?? [];
+  return { row: Number(row), col: Number(col) };
+}
+
+function getPosKeyFromNodeKey(nodeKey: NodeKey): PosKey {
+  return getPosKey(getPosFromPosKey(nodeKey));
+}
+
+type UpdateScoreArgs<T> = {
+  node: NodeWithScore<T>;
+  parent: Node<T>;
 };
 
-type DijkstraArgs = {
+type DijkstraArgs<Extra = {}> = {
   matrix: Matrix<unknown>;
-  start: Position;
-  end: Position;
-  getNext: (current: Node) => Node[];
+  start: Node<Extra>;
+  end: Node<Extra>;
+  getNext: (current: NodeWithScore<Extra>) => NodeWithScore<Extra>[];
 };
 
-export class Dijkstra {
-  args: DijkstraArgs;
+export class Dijkstra<Extra = {}> {
+  args: DijkstraArgs<Extra>;
 
-  queue: PosKey[] = [];
-  visited: Set<PosKey> = new Set();
+  queue: Node<Extra>[] = [];
+  visited: Set<NodeKey> = new Set();
 
-  scoreMap: Record<PosKey, number> = {};
-  parentMap: Record<PosKey, PosKey[]> = {};
+  scoreMap: Record<NodeKey, number> = {};
+  parentMap: Record<NodeKey, NodeKey[]> = {};
 
-  constructor(args: DijkstraArgs) {
+  constructor(args: DijkstraArgs<Extra>) {
     this.args = args;
   }
 
@@ -38,7 +64,8 @@ export class Dijkstra {
 
     while (left < right) {
       const mid = Math.floor((left + right) / 2);
-      if (this.scoreMap[this.queue[mid]] > score) {
+      const midKey = getNodeKey(this.queue[mid]);
+      if (this.scoreMap[midKey] > score) {
         right = mid;
       } else {
         left = mid + 1;
@@ -48,53 +75,43 @@ export class Dijkstra {
     return left;
   }
 
-  private push(pos: Position) {
-    const pk = getPosKey(pos);
-    if (this.visited.has(pk)) return;
+  private push(node: Node<Extra>) {
+    const nodeKey = getNodeKey(node);
+    if (this.visited.has(nodeKey)) return;
 
-    if (this.queue.includes(pk)) {
-      // delete from list
-      const index = this.queue.indexOf(pk);
-      this.queue.splice(index, 1);
+    const currIndex = this.queue.findIndex((n) => getNodeKey(n) === nodeKey);
+    if (currIndex !== -1) {
+      this.queue.splice(currIndex, 1);
     }
 
-    const index = this.findInsertionIndex(this.scoreMap[pk]);
-    this.queue.splice(index, 0, pk);
+    const index = this.findInsertionIndex(this.scoreMap[nodeKey]);
+    this.queue.splice(index, 0, node);
   }
 
   private get next() {
     const next = this.queue.shift();
     if (!next) return null;
-    this.visited.add(next);
+    this.visited.add(getNodeKey(next));
     return next;
   }
 
-  private updateScore({ pos, score: newScore, parent }: UpdateScoreArgs) {
-    const [nk, pk] = [getPosKey(pos), getPosKey(parent)];
+  private updateScore({ parent, node }: UpdateScoreArgs<Extra>) {
+    const [nk, pk] = [getNodeKey(node), getNodeKey(parent)];
     if (!(nk in this.parentMap)) this.parentMap[nk] = [pk];
 
-    const prevScore = this.scoreMap[getPosKey(pos)] ?? Infinity;
+    const prevScore = this.scoreMap[getNodeKey(node)] ?? Infinity;
 
-    if (newScore < prevScore) {
-      this.scoreMap[nk] = newScore;
+    if (node.score < prevScore) {
+      this.scoreMap[nk] = node.score;
       this.parentMap[nk] = [pk];
-    } else if (newScore === prevScore) {
+    } else if (node.score === prevScore) {
       this.parentMap[nk].push(pk);
     }
   }
 
-  getScore(pos: Position) {
-    const posKey = getPosKey(pos);
-    if (!(posKey in this.scoreMap)) {
-      this.scoreMap[posKey] = Infinity;
-    }
-
-    return this.scoreMap[posKey];
-  }
-
   calculate() {
     this.scoreMap = {
-      [getPosKey(this.args.start)]: 0,
+      [getNodeKey(this.args.start)]: 0,
     };
 
     this.parentMap = {};
@@ -104,31 +121,62 @@ export class Dijkstra {
 
     let count = 0;
     while (this.queue.length) {
-      const pk = this.next!;
-      const pos = getPos(pk);
-      const score = this.scoreMap[pk];
+      const node = this.next!;
+      const nodeKey = getNodeKey(node);
+      // console.log(nodeKey);
+      const score = this.scoreMap[nodeKey];
 
-      const nextNodes = this.args.getNext({ pos, score });
+      const nextNodes = this.args.getNext({ ...node, score });
 
-      nextNodes.forEach((node) => {
-        this.updateScore({ ...node, parent: pos });
-        this.push(node.pos);
+      nextNodes.forEach((n) => {
+        this.updateScore({ node: n, parent: node });
+        this.push(n);
       });
 
       count++;
-      // if (count % 1000 === 0) {
       // console.clear();
-      // console.log(count);
-      // map.log({
-      //   highlighted: [...this.queue.visited].map((k) => ({
+      // this.args.matrix.log({
+      //   highlighted: [...this.visited].map((k) => ({
       //     pos: getPos(k),
       //     color: "background-cyan",
       //   })),
       // });
       // await new Promise((r) => setTimeout(r, 1));
-      // }
     }
 
-    return this.scoreMap[getPosKey(this.args.end)];
+    return this.minScore;
+  }
+
+  get endKeys() {
+    return keys(this.scoreMap).reduce<NodeKey[]>((acc, curr) => {
+      if (!curr.includes(getPosKey(this.args.end.pos))) return acc;
+      return [...acc, curr];
+    }, []);
+  }
+
+  get minScore() {
+    return this.endKeys.reduce<number>((acc, curr) => {
+      const s = this.scoreMap[curr];
+      return s < acc ? s : acc;
+    }, Infinity);
+  }
+
+  getOptimalPositions() {
+    const seats = new Set<PosKey>();
+    const visited = new Set<NodeKey>();
+    const stack = [
+      ...this.endKeys.filter((k) => {
+        return this.scoreMap[k] === this.minScore;
+      }),
+    ];
+    while (stack.length) {
+      const nk = stack.pop()!;
+      visited.add(nk);
+      seats.add(getPosKeyFromNodeKey(nk));
+      const parents = this.parentMap[nk] ?? [];
+      parents.filter((k) => !visited.has(k)).forEach((p) => stack.push(p));
+    }
+
+    return [...seats].map((pk) => getPosFromPosKey(pk));
   }
 }

@@ -43,8 +43,8 @@ export async function solve(inputType: keyof typeof inputs) {
 
   const dijkstra = new Dijkstra({
     matrix: map,
-    start,
-    end,
+    start: { pos: start },
+    end: { pos: end },
     getNext: (node) => {
       const adjacent = map
         .getAdjacent(node.pos)
