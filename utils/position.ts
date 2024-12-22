@@ -47,3 +47,14 @@ export function isPosition(pos: unknown): pos is Position {
     typeof pos === "object" && pos !== null && "row" in pos && "col" in pos
   );
 }
+
+type PosKey = string;
+
+export function getPosKey(pos: Position) {
+  return `pos:{${pos.row},${pos.col}}`;
+}
+
+export function getPos(pk: PosKey): Position {
+  const [row, col] = /pos:\{(\d+),(\d+)\}/.exec(pk)?.slice(1, 3) ?? [];
+  return { row: Number(row), col: Number(col) };
+}
