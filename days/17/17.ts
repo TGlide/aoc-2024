@@ -1,8 +1,6 @@
-import { getRelativeDirs, type Direction } from "../../utils/direction";
 import { readCurrentDayInputs } from "../../utils/file";
-import { Matrix } from "../../utils/matrix";
-import { type Position } from "../../utils/position";
-import { keys, type ValueOf } from "../../utils/types";
+import { dequal } from "dequal";
+import { remainderMod } from "../../utils/math";
 
 const inputs = readCurrentDayInputs();
 
@@ -21,14 +19,23 @@ const log = {
   },
 };
 
-function solve(data: string) {
-  const [r, p] = data.split("\n\n");
-  let [ra, rb, rc] = r.split("\n").map((line) => Number(/\d+/.exec(line)![0]));
-  log.info(ra, rb, rc);
+type Registers = {
+  a: number;
+  b: number;
+  c: number;
+};
 
-  const program = p.split(":")[1].split(",").map(Number);
-  log.info(program);
-  log.info();
+type Program = number[];
+
+type ShouldHalt = boolean;
+type OnReceiveOutput = (outputs: number[]) => ShouldHalt;
+
+function runProgram(
+  registers: Registers,
+  program: Program,
+  onReceiveOutput?: OnReceiveOutput,
+): number[] {
+  let { a: ra, b: rb, c: rc } = registers;
 
   function getComboOperand(operand: number) {
     switch (operand) {
@@ -46,7 +53,7 @@ function solve(data: string) {
   }
 
   let ins_pointer = 0;
-  const outputs: Array<unknown> = [];
+  const outputs: Array<number> = [];
   while (ins_pointer < program.length) {
     const [opcode, operand] = [program[ins_pointer], program[ins_pointer + 1]];
     const comboOperand = getComboOperand(operand);
@@ -70,7 +77,7 @@ function solve(data: string) {
       case 2: {
         log.info("2 bst (modulo)");
         const prev = rb;
-        rb = comboOperand % 8;
+        rb = remainderMod(comboOperand, 8);
         log.info(`Register B changed from ${prev} to ${rb}`);
         break;
       }
@@ -92,7 +99,9 @@ function solve(data: string) {
       }
       case 5: {
         log.info("5 out (output)");
-        outputs.push(comboOperand % 8);
+        outputs.push(remainderMod(comboOperand, 8));
+        const shouldHalt = onReceiveOutput?.(outputs);
+        if (shouldHalt) return outputs;
         break;
       }
       case 6: {
@@ -117,12 +126,39 @@ function solve(data: string) {
     }
   }
 
-  console.log(outputs.join(","));
+  return outputs;
+}
+
+function solve(data: string) {
+  const [r, p] = data.split("\n\n");
+  let [ra, rb, rc] = r.split("\n").map((line) => Number(/\d+/.exec(line)![0]));
+  log.info(ra, rb, rc);
+
+  const program = p.split(":")[1].split(",").map(Number);
+  log.info(program);
+  log.info();
+
+  const one = runProgram({ a: ra, b: rb, c: rc }, program).join(",");
+  console.log(one);
+
+  let two = 0;
+  let res: number[] = [];
+  while (!dequal(res, program)) {
+    // console.log(two);
+    two++;
+    res = runProgram({ a: two, b: rb, c: rc }, program, (output) => {
+      return !dequal(output, program.slice(0, output.length));
+    });
+    if (res.length > 7) {
+      console.log(two, res, program);
+    }
+  }
+  console.log(two, runProgram({ a: two, b: rb, c: rc }, program));
 }
 
 const run_input = 1;
 
-solve(inputs.example);
+solve(inputs.example2);
 if (run_input) {
   solve(inputs.input);
 }

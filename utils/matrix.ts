@@ -1,15 +1,26 @@
 import type { Direction } from "./direction";
 import type { Position } from "./position";
-import { isInBounds } from "./position";
+import { isInBounds, isPosition } from "./position";
+
+type MatrixGenerator<T> = Position & {
+  cb: (pos: Position) => T;
+};
+type MatrixInput<T> = string | T[][] | MatrixGenerator<T>;
 
 export class Matrix<T> {
   private data: T[][];
 
-  constructor(input: string | T[][]) {
+  constructor(input: MatrixInput<T>) {
     if (typeof input === "string") {
       this.data = input.split("\n").map((line) => line.split("") as T[]);
-    } else {
+    } else if (Array.isArray(input)) {
       this.data = input;
+    } else {
+      this.data = [...new Array(input.row)].map((_, row) => {
+        return [...new Array(input.col)].map((_, col) => {
+          return input.cb({ row, col });
+        });
+      });
     }
   }
 

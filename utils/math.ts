@@ -33,3 +33,8 @@ export function memoize<T extends AnyFunction>(fn: T): T {
     return result;
   }) as T;
 }
+
+export function remainderMod(n: number, d: number) {
+  var q = parseInt((n / d) as any); // truncates to lower magnitude
+  return n - d * q;
+}

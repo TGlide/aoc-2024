@@ -41,3 +41,9 @@ export function distance(pos1: Position, pos2: Position) {
 export function isEqualPos(pos1: Position, pos2: Position) {
   return pos1.row === pos2.row && pos1.col === pos2.col;
 }
+
+export function isPosition(pos: unknown): pos is Position {
+  return (
+    typeof pos === "object" && pos !== null && "row" in pos && "col" in pos
+  );
+}
