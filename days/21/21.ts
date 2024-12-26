@@ -35,45 +35,40 @@ const doorKeypad = new Matrix<DoorKey>([
   [DOOR_KEYS.gap, DOOR_KEYS.zero, DOOR_KEYS.activate],
 ]);
 
-const ROBOT_KEYS = {
+const CONTROL_KEYS = {
   up: "^",
   left: "<",
   right: ">",
   down: "v",
   ...BASE_KEYS,
 } as const;
-type RobotKey = ValueOf<typeof ROBOT_KEYS>;
-function isRobotKeyArr(arr: string[]): arr is RobotKey[] {
-  return arr.every((v) => Object.values(ROBOT_KEYS).includes(v as any));
+type ControlKey = ValueOf<typeof CONTROL_KEYS>;
+function isControlKeyArr(arr: string[]): arr is ControlKey[] {
+  return arr.every((v) => Object.values(CONTROL_KEYS).includes(v as any));
 }
 
-const directionToRobotKeyMap: Record<Direction, RobotKey> = {
-  east: ROBOT_KEYS.right,
-  west: ROBOT_KEYS.left,
-  north: ROBOT_KEYS.up,
-  south: ROBOT_KEYS.down,
+type Path = ControlKey[];
+
+const directionToControlKeyMap: Record<Direction, ControlKey> = {
+  east: CONTROL_KEYS.right,
+  west: CONTROL_KEYS.left,
+  north: CONTROL_KEYS.up,
+  south: CONTROL_KEYS.down,
 };
 
-const robotKeypad = new Matrix<RobotKey>([
-  [ROBOT_KEYS.gap, ROBOT_KEYS.up, ROBOT_KEYS.activate],
-  [ROBOT_KEYS.left, ROBOT_KEYS.down, ROBOT_KEYS.right],
+const controlKeypad = new Matrix<ControlKey>([
+  [CONTROL_KEYS.gap, CONTROL_KEYS.up, CONTROL_KEYS.activate],
+  [CONTROL_KEYS.left, CONTROL_KEYS.down, CONTROL_KEYS.right],
 ]);
 
-type PathsBetweenTwoPointsArgs<T extends DoorKey | RobotKey> = {
-  matrix: Matrix<T>;
-  from: T;
-  to: T;
-};
+type AnyKey = DoorKey | ControlKey;
+const getPaths = memoize(function (from: AnyKey, to: AnyKey): Path[] {
+  const matrix = isControlKeyArr([from, to]) ? controlKeypad : doorKeypad;
 
-const pathsBetweenTwoPoints = memoize(function <T extends DoorKey | RobotKey>({
-  matrix,
-  from,
-  to,
-}: PathsBetweenTwoPointsArgs<T>): RobotKey[][] {
   const astar = new AStar({
     matrix,
-    start: { pos: matrix.findOrThrow(from) },
-    end: { pos: matrix.findOrThrow(to) },
+    start: { pos: matrix.findOrThrow(from as any) },
+    end: { pos: matrix.findOrThrow(to as any) },
     getNext({ pos, score }) {
       return matrix
         .getAdjacentNotNull(pos)
@@ -85,99 +80,58 @@ const pathsBetweenTwoPoints = memoize(function <T extends DoorKey | RobotKey>({
   astar.calculate();
   const bestPaths = astar.getBestPaths();
 
-  const res: RobotKey[][] = [];
+  const res: ControlKey[][] = [];
   for (const bestPath of bestPaths) {
-    const keys: RobotKey[] = [];
+    const keys: ControlKey[] = [];
 
     for (let i = 1; i < bestPath.length; i++) {
       let [prev, curr] = [bestPath[i - 1], bestPath[i]];
       const dir = getDirBetweenPos(prev, curr);
-      keys.push(directionToRobotKeyMap[dir]);
+      keys.push(directionToControlKeyMap[dir]);
     }
-    keys.push(ROBOT_KEYS.activate);
+    keys.push(CONTROL_KEYS.activate);
     res.push(keys);
   }
 
   return res;
 });
 
-function combinations<T>(a: T[][], b: T[][]): T[][] {
-  if (!a.length) return b;
-  if (!b.length) return a;
-
-  const res: T[][] = [];
-  a.forEach((arr1) => {
-    b.forEach((arr2) => {
-      res.push([...arr1, ...arr2]);
-    });
-  });
-
-  return res;
-}
-
-type Path = RobotKey[];
-
-const paths = memoize(function <T extends DoorKey | RobotKey>(
-  sequence: T[],
-): Path[] {
-  const matrix = isRobotKeyArr(sequence) ? robotKeypad : doorKeypad;
-  let res: Path[] = [];
-
-  for (let i = 0; i < sequence.length; i++) {
-    const [from, to] = [sequence[i - 1] ?? BASE_KEYS.activate, sequence[i]];
-    const nextSteps = pathsBetweenTwoPoints({ matrix, from, to });
-    res = combinations(res, nextSteps);
-  }
-
-  return res;
+const getSteps = memoize(function (
+  from: AnyKey,
+  to: AnyKey,
+  robots: number,
+): number {
+  return getPaths(from, to).reduce((acc, path) => {
+    const steps = getStepsInPath(path, robots);
+    return acc > steps ? steps : acc;
+  }, Infinity);
 });
 
-type GetShortestPathArgs = {
-  sequence: Array<DoorKey | RobotKey>;
-  numRobots: number;
-};
-
-const getShortestPath = memoize(function ({
-  sequence,
-  numRobots,
-}: GetShortestPathArgs): Path {
-  if (numRobots === 0) {
-    const p = paths(sequence);
-    return p.reduce((a, b) => (a.length < b.length ? a : b), p[0]);
+const getStepsInPath = memoize(function (
+  path: DoorKey[] | ControlKey[],
+  robots: number,
+): number {
+  if (robots === 0) return path.length;
+  let steps = 0;
+  for (let i = 0; i < path.length; i++) {
+    const [from, to] = [path[i - 1] ?? BASE_KEYS.activate, path[i]];
+    steps += getSteps(from, to, robots - 1);
   }
-  const p = paths(sequence).map((p) =>
-    getShortestPath({ sequence: p, numRobots: numRobots - 1 }),
-  );
-  return p.reduce((a, b) => (a.length < b.length ? a : b), p[0]);
+  return steps;
 });
 
-function one(data: string) {
-  const codes = data.split("\n").map((line) => line.split(""));
-
-  const NUM_ROBOTS = 3;
+function solve(data: string, robots: number) {
+  const codes = data.split("\n").map((line) => line.split("")) as DoorKey[][];
 
   let res = 0;
-  for (const code of codes.slice(0, 1)) {
+  for (const code of codes) {
     const codeNum = Number(code.slice(0, code.length - 1).join(""));
-    console.log(code);
-
-    const sp = getShortestPath({
-      sequence: code as any,
-      numRobots: NUM_ROBOTS,
-    });
-    console.log(sp.length);
+    res += getStepsInPath(code, robots) * codeNum;
   }
-
-  console.log();
-  console.log();
+  console.log(res);
 }
 
-one(inputs.example);
-// one(inputs.input);
-
+solve(inputs.example, 3);
+solve(inputs.input, 3);
+solve(inputs.input, 26);
 console.log();
-
-function two(data: string) {}
-
-two(inputs.example);
-// two(inputs.input);
