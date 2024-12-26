@@ -41,8 +41,11 @@ const ROBOT_KEYS = {
   right: ">",
   down: "v",
   ...BASE_KEYS,
-};
+} as const;
 type RobotKey = ValueOf<typeof ROBOT_KEYS>;
+function isRobotKeyArr(arr: string[]): arr is RobotKey[] {
+  return arr.every((v) => Object.values(ROBOT_KEYS).includes(v as any));
+}
 
 const directionToRobotKeyMap: Record<Direction, RobotKey> = {
   east: ROBOT_KEYS.right,
@@ -112,21 +115,16 @@ function combinations<T>(a: T[][], b: T[][]): T[][] {
   return res;
 }
 
-type Path = RobotKey[][];
+type Path = RobotKey[];
 
-type PathsArgs<T extends DoorKey | RobotKey> = {
-  matrix: Matrix<T>;
-  sequence: T[];
-};
+const paths = memoize(function <T extends DoorKey | RobotKey>(
+  sequence: T[],
+): Path[] {
+  const matrix = isRobotKeyArr(sequence) ? robotKeypad : doorKeypad;
+  let res: Path[] = [];
 
-const paths = memoize(function <T extends DoorKey | RobotKey>({
-  matrix,
-  sequence,
-}: PathsArgs<T>): Path {
-  let res: Path = [];
-
-  for (let i = 1; i < sequence.length; i++) {
-    const [from, to] = [sequence[i - 1], sequence[i]];
+  for (let i = 0; i < sequence.length; i++) {
+    const [from, to] = [sequence[i - 1] ?? BASE_KEYS.activate, sequence[i]];
     const nextSteps = pathsBetweenTwoPoints({ matrix, from, to });
     res = combinations(res, nextSteps);
   }
@@ -134,40 +132,43 @@ const paths = memoize(function <T extends DoorKey | RobotKey>({
   return res;
 });
 
+type GetShortestPathArgs = {
+  sequence: Array<DoorKey | RobotKey>;
+  numRobots: number;
+};
+
+const getShortestPath = memoize(function ({
+  sequence,
+  numRobots,
+}: GetShortestPathArgs): Path {
+  if (numRobots === 0) {
+    const p = paths(sequence);
+    return p.reduce((a, b) => (a.length < b.length ? a : b), p[0]);
+  }
+  const p = paths(sequence).map((p) =>
+    getShortestPath({ sequence: p, numRobots: numRobots - 1 }),
+  );
+  return p.reduce((a, b) => (a.length < b.length ? a : b), p[0]);
+});
+
 function one(data: string) {
   const codes = data.split("\n").map((line) => line.split(""));
 
-  const NUM_ROBOTS = 1;
+  const NUM_ROBOTS = 3;
 
   let res = 0;
   for (const code of codes.slice(0, 1)) {
     const codeNum = Number(code.slice(0, code.length - 1).join(""));
-    console.log(codeNum);
     console.log(code);
 
-    let finalPaths = paths({
-      matrix: doorKeypad,
-      sequence: [BASE_KEYS.activate, ...code],
+    const sp = getShortestPath({
+      sequence: code as any,
+      numRobots: NUM_ROBOTS,
     });
-
-    for (let i = 0; i < NUM_ROBOTS; i++) {
-      finalPaths = finalPaths.flatMap((path) => {
-        return paths({
-          matrix: robotKeypad,
-          sequence: [BASE_KEYS.activate, ...path],
-        });
-      });
-    }
-    finalPaths.forEach((p) => console.log(p.join("")));
-
-    const shortestScore = Math.min(...finalPaths.map((p) => p.length));
-    console.log(shortestScore);
+    console.log(sp.length);
   }
 
-  console.log(JSON.stringify(doorKeypad));
-  // doorKeypad.log();
   console.log();
-  // robotKeypad.log();
   console.log();
 }
 
