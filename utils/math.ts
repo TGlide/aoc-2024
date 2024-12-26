@@ -17,6 +17,11 @@ export function getDeterminant(matrix: number[][]) {
 }
 
 export function remainderMod(n: number, d: number) {
-  var q = parseInt((n / d) as any); // truncates to lower magnitude
+  const q = parseInt((n / d) as any); // truncates to lower magnitude
+  return n - d * q;
+}
+
+export function remainderModBigInt(n: bigint, d: bigint) {
+  const q = BigInt((n / d) as any); // truncates to lower magnitude
   return n - d * q;
 }
