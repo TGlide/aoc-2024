@@ -5,6 +5,7 @@ import { keys, type ValueOf } from "../../utils/types";
 import { hasPosition, isEqualPos, type Position } from "../../utils/position";
 import * as readline from "readline";
 import { sum } from "../../utils/array";
+import { AStar } from "../../utils/a-star";
 
 const inputs = readCurrentDayInputs();
 
@@ -21,7 +22,7 @@ function one(data: string) {
   const matrix = new Matrix<Entity>(data);
   matrix.log();
 
-  const dijkstra = new Dijkstra({
+  const aStar = new AStar({
     matrix,
     start: { pos: matrix.findOrThrow(ENTITIES.start) },
     end: { pos: matrix.findOrThrow(ENTITIES.end) },
@@ -35,19 +36,21 @@ function one(data: string) {
     },
   });
 
-  const pico = dijkstra.calculate();
+  const pico = aStar.calculate();
   console.log(pico);
 
   const allWalls: Position[] = [];
   for (const { item, ...pos } of matrix.traverse()) {
+    if (item !== ENTITIES.wall) continue;
     if (
-      pos.row === 0 ||
-      pos.col === 0 ||
-      pos.row === matrix.size.row - 1 ||
-      pos.col === matrix.size.col - 1
-    )
+      !matrix
+        .getAdjacentNotNull(pos)
+        .some((p) => matrix.at(p) !== ENTITIES.wall)
+    ) {
       continue;
-    if (item === ENTITIES.wall) allWalls.push(pos);
+    }
+
+    allWalls.push(pos);
   }
 
   // const cheats: [Position, Position][] = [];
@@ -69,7 +72,7 @@ function one(data: string) {
     }
 
     const wall = allWalls[i];
-    const d = new Dijkstra({
+    const d = new AStar({
       matrix,
       start: { pos: matrix.findOrThrow(ENTITIES.start) },
       end: { pos: matrix.findOrThrow(ENTITIES.end) },
