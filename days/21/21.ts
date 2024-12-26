@@ -2,6 +2,7 @@ import { AStar } from "../../utils/a-star";
 import { getDirBetweenPos, type Direction } from "../../utils/direction";
 import { readCurrentDayInputs } from "../../utils/file";
 import { Matrix } from "../../utils/matrix";
+import { memoize } from "../../utils/memo";
 import { type ValueOf } from "../../utils/types";
 
 const inputs = readCurrentDayInputs();
@@ -55,16 +56,17 @@ const robotKeypad = new Matrix<RobotKey>([
   [ROBOT_KEYS.left, ROBOT_KEYS.down, ROBOT_KEYS.right],
 ]);
 
-type StepsArgs<T extends DoorKey | RobotKey> = {
+type PathsBetweenTwoPointsArgs<T extends DoorKey | RobotKey> = {
   matrix: Matrix<T>;
   from: T;
   to: T;
 };
-function steps<T extends DoorKey | RobotKey>({
+
+const pathsBetweenTwoPoints = memoize(function <T extends DoorKey | RobotKey>({
   matrix,
   from,
   to,
-}: StepsArgs<T>): RobotKey[] {
+}: PathsBetweenTwoPointsArgs<T>): RobotKey[][] {
   const astar = new AStar({
     matrix,
     start: { pos: matrix.findOrThrow(from) },
@@ -78,37 +80,91 @@ function steps<T extends DoorKey | RobotKey>({
   });
 
   astar.calculate();
-  astar.logMatrixWithBestPath();
-  const bestPath = astar.getBestPath();
+  const bestPaths = astar.getBestPaths();
 
-  const res: RobotKey[] = [];
-  for (let i = 1; i < bestPath.length; i++) {
-    let [prev, curr] = [bestPath[i - 1], bestPath[i]];
-    const dir = getDirBetweenPos(prev, curr);
-    res.push(directionToRobotKeyMap[dir]);
+  const res: RobotKey[][] = [];
+  for (const bestPath of bestPaths) {
+    const keys: RobotKey[] = [];
+
+    for (let i = 1; i < bestPath.length; i++) {
+      let [prev, curr] = [bestPath[i - 1], bestPath[i]];
+      const dir = getDirBetweenPos(prev, curr);
+      keys.push(directionToRobotKeyMap[dir]);
+    }
+    keys.push(ROBOT_KEYS.activate);
+    res.push(keys);
   }
-  res.push(ROBOT_KEYS.activate);
+
+  return res;
+});
+
+function combinations<T>(a: T[][], b: T[][]): T[][] {
+  if (!a.length) return b;
+  if (!b.length) return a;
+
+  const res: T[][] = [];
+  a.forEach((arr1) => {
+    b.forEach((arr2) => {
+      res.push([...arr1, ...arr2]);
+    });
+  });
+
   return res;
 }
+
+type Path = RobotKey[][];
+
+type PathsArgs<T extends DoorKey | RobotKey> = {
+  matrix: Matrix<T>;
+  sequence: T[];
+};
+
+const paths = memoize(function <T extends DoorKey | RobotKey>({
+  matrix,
+  sequence,
+}: PathsArgs<T>): Path {
+  let res: Path = [];
+
+  for (let i = 1; i < sequence.length; i++) {
+    const [from, to] = [sequence[i - 1], sequence[i]];
+    const nextSteps = pathsBetweenTwoPoints({ matrix, from, to });
+    res = combinations(res, nextSteps);
+  }
+
+  return res;
+});
 
 function one(data: string) {
   const codes = data.split("\n").map((line) => line.split(""));
 
-  const test = ["A", ...codes[0]];
-  const totalSteps: RobotKey[] = [];
-  for (let i = 1; i < test.length; i++) {
-    const [from, to] = [test[i - 1], test[i]];
-    console.log(from, to);
-    totalSteps.push(
-      ...steps({
-        matrix: doorKeypad,
-        from,
-        to,
-      }),
-    );
-  }
-  console.log(totalSteps);
+  const NUM_ROBOTS = 1;
 
+  let res = 0;
+  for (const code of codes.slice(0, 1)) {
+    const codeNum = Number(code.slice(0, code.length - 1).join(""));
+    console.log(codeNum);
+    console.log(code);
+
+    let finalPaths = paths({
+      matrix: doorKeypad,
+      sequence: [BASE_KEYS.activate, ...code],
+    });
+
+    for (let i = 0; i < NUM_ROBOTS; i++) {
+      finalPaths = finalPaths.flatMap((path) => {
+        return paths({
+          matrix: robotKeypad,
+          sequence: [BASE_KEYS.activate, ...path],
+        });
+      });
+    }
+    finalPaths.forEach((p) => console.log(p.join("")));
+
+    const shortestScore = Math.min(...finalPaths.map((p) => p.length));
+    console.log(shortestScore);
+  }
+
+  console.log(JSON.stringify(doorKeypad));
   // doorKeypad.log();
   console.log();
   // robotKeypad.log();

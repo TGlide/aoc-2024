@@ -1,8 +1,10 @@
+import { last } from "./array";
 import type { Matrix } from "./matrix";
 import {
   distance,
   getPos,
   getPosKey,
+  hasPosition,
   isEqualPos,
   type Position,
   type PosKey,
@@ -195,6 +197,30 @@ export class AStar<Extra = {}> {
     }
 
     return path.toReversed();
+  }
+
+  getBestPaths(): Position[][] {
+    const minScore = this.minScore;
+    const endKeys = this.endKeys.reduce<NodeKey[]>((acc, curr) => {
+      const s = this.scoreMap[curr];
+      if (s === minScore) return [...acc, curr];
+      return acc;
+    }, []);
+
+    const paths: NodeKey[][] = endKeys.map((k) => [k]);
+    while (
+      paths.some(
+        (k) => !hasPosition(k.map(getPosFromPosKey), this.args.start.pos),
+      )
+    ) {
+      const path = paths.shift()!;
+      const parents = this.parentMap[last(path)];
+      parents.forEach((p) => {
+        paths.push([...path, p]);
+      });
+    }
+
+    return paths.map((k) => k.map(getPosFromPosKey).toReversed());
   }
 
   getOptimalPositions() {
