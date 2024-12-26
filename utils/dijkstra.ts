@@ -179,4 +179,13 @@ export class Dijkstra<Extra = {}> {
 
     return [...seats].map((pk) => getPosFromPosKey(pk));
   }
+
+  logMatrixWithPath() {
+    this.args.matrix.log({
+      highlighted: this.getOptimalPositions().map((pos) => ({
+        pos,
+        color: "background-cyan",
+      })),
+    });
+  }
 }

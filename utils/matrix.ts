@@ -24,6 +24,10 @@ export class Matrix<T> {
     }
   }
 
+  get size(): Position {
+    return { row: this.data.length, col: this.data[0].length };
+  }
+
   at({ row, col }: Position): T {
     return this.data[row][col];
   }
@@ -57,6 +61,10 @@ export class Matrix<T> {
     return positions.map((p) => (isInBounds(p, this.data) ? p : null));
   }
 
+  getAdjacentNotNull(pos: Position): Position[] {
+    return this.getAdjacent(pos).filter(isPosition);
+  }
+
   getAdjacentMap(pos: Position): Record<Direction, Position | null> {
     return {
       north: { row: pos.row - 1, col: pos.col },
@@ -68,10 +76,6 @@ export class Matrix<T> {
 
   log(options?: Partial<LogMatrixOptions<T>>): void {
     logMatrix(this.data, options);
-  }
-
-  logStr(): void {
-    console.log(this.data.map((row) => row.join("")).join("\n"));
   }
 
   *traverse() {

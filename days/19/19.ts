@@ -1,8 +1,4 @@
-import { Dijkstra } from "../../utils/dijkstra";
 import { readCurrentDayInputs } from "../../utils/file";
-import { Matrix } from "../../utils/matrix";
-import { hasPosition, isEqualPos, type Position } from "../../utils/position";
-import { type ValueOf } from "../../utils/types";
 
 const inputs = readCurrentDayInputs();
 
