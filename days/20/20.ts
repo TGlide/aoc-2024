@@ -67,9 +67,9 @@ function one(data: string) {
   const savingsMap: Record<SecondsSaved, number> = {};
 
   for (let i = 0; i < allWalls.length; i++) {
-    if (i % 500 === 0) {
-      console.log(`${i + 1}/${allWalls.length}`);
-    }
+    // if (i % 500 === 0) {
+    console.log(`${i + 1}/${allWalls.length}`);
+    // }
 
     const wall = allWalls[i];
     const d = new AStar({

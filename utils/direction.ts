@@ -1,4 +1,5 @@
 import { keys } from "./types";
+import type { Position } from "./position";
 export type Direction = "east" | "west" | "north" | "south";
 export type RelativeDir = "forward" | "left" | "right";
 
@@ -23,4 +24,17 @@ export function getRelativeDir(
 ): RelativeDir | null {
   const res = getRelativeDirs(d1);
   return keys(res).find((k) => res[k] === d2) || null;
+}
+
+export function getDirBetweenPos(from: Position, to: Position): Direction {
+  if (from.row === to.row) {
+    if (from.col < to.col) return "east";
+    if (from.col > to.col) return "west";
+    throw new Error(`No direction between ${from} and ${to}`);
+  }
+
+  if (from.row < to.row) return "south";
+  if (from.row > to.row) return "north";
+
+  throw new Error(`No direction between ${from} and ${to}`);
 }

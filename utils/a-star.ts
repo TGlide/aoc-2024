@@ -3,6 +3,7 @@ import {
   distance,
   getPos,
   getPosKey,
+  isEqualPos,
   type Position,
   type PosKey,
 } from "./position";
@@ -135,11 +136,12 @@ export class AStar<Extra = {}> {
     this.push(this.args.start);
 
     let count = 0;
+
     while (this.queue.length) {
       const node = this.next!;
       const nodeKey = getNodeKey(node);
-      // console.log(nodeKey);
-      const score = this.scoreMap[nodeKey];
+
+      const score = this.scoreMap[nodeKey] ?? Infinity;
 
       const nextNodes = this.args.getNext({ ...node, score });
 
@@ -176,6 +178,25 @@ export class AStar<Extra = {}> {
     }, Infinity);
   }
 
+  getBestPath(): Position[] {
+    const minScore = this.minScore;
+    let curr = this.endKeys.reduce<NodeKey>((acc, curr) => {
+      const s = this.scoreMap[curr];
+      if (s === minScore) return curr;
+      return acc;
+    }, this.endKeys[0]);
+
+    const path: Position[] = [getPosFromPosKey(curr)];
+    while (curr in this.parentMap) {
+      curr = this.parentMap[curr][0];
+      const pos = getPosFromPosKey(curr);
+      path.push(pos);
+      if (isEqualPos(this.args.start.pos, pos)) break;
+    }
+
+    return path.toReversed();
+  }
+
   getOptimalPositions() {
     const seats = new Set<PosKey>();
     const visited = new Set<NodeKey>();
@@ -193,6 +214,15 @@ export class AStar<Extra = {}> {
     }
 
     return [...seats].map((pk) => getPosFromPosKey(pk));
+  }
+
+  logMatrixWithBestPath() {
+    this.args.matrix.log({
+      highlighted: this.getBestPath().map((pos) => ({
+        pos,
+        color: "background-cyan",
+      })),
+    });
   }
 
   logMatrixWithPath() {
